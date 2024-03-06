@@ -1,0 +1,148 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+Function.ODBC.Connection!Conx.OpenConnection(Variable.ambient.PDSN,Variable.Ambient.PUSER,Variable.Ambient.PPass)
+V.Local.sQuery.Declare(String)
+V.Local.sQuery2.Declare(String)
+V.Local.sProdLine.Declare(String)
+V.Local.sUserRet.Declare(String)
+V.Local.sGroupRet.Declare(String)
+V.Local.sGroupemails.Declare(String)
+V.Local.sGroup.Declare(String)
+V.Local.iCount.Declare(Long)
+V.Local.sSubjectLine.Declare(String)
+V.Local.sRtrDesc.Declare(String)
+V.Local.sUserName.Declare(String)
+V.Local.sSenderEmail.Declare(String)
+
+'When screen populates
+F.Intrinsic.Control.If(V.Caller.Hook,=,11010)
+	F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PL",59)
+	F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PT",192)
+	F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PW",75)
+	F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PL",41)
+	F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PT",192)
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-LBL-1,"LOCK",0)
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"LOCK",0)
+	V.passed.GAB-LBL-1.set("Ready to Quote")
+	V.Passed.GAB-CHK-1.Set("N")
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-LBL-1,"HIDE",0)
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"HIDE",0)
+
+F.Intrinsic.Control.ElseIf(V.Caller.Hook,=,11090)
+'Upon SAVE click
+'Looks through the ATG_RTR_QT_CHECKED table to see if the current router exists	
+	F.Intrinsic.String.Concat("SELECT * FROM ATG_RTR_QT_CHECKED WHERE ROUTER_NO = '",V.Passed.000014,"'",V.Local.sQuery2)
+	F.ODBC.Connection!conx.OpenRecordsetRW("rstCheckforChecked",V.Local.sQuery2)
+'If the router is not in the custom table
+	F.Intrinsic.Control.If(V.ODBC.Conx!rstCheckforChecked.EOF,=,True)
+'If the current router on the screen is checked "Ready to Quote" then
+		F.Intrinsic.Control.If(V.Passed.GAB-CHK-1,=,"Y")
+		V.Local.sProdLine.Set(V.Passed.000037)
+'Check the maint table to see if the current product line has a group associated with it
+		F.Intrinsic.String.Concat("Select PRODUCT_LINE, USERS_GROUP, CONTACT_TYPE FROM ATG_RTR_QT_CONTACTS WHERE PRODUCT_LINE = '",V.local.sProdLine,"'"," ORDER BY CONTACT_TYPE",V.local.sQuery)
+		F.ODBC.Connection!conx.OpenRecordsetRO("rstReadTable",V.Local.sQuery)
+'If the current product line does not have an associated group the pop a warning to the user
+				F.Intrinsic.Control.If(V.ODBC.Conx!rstReadTable.EOF,=,True)
+					F.Intrinsic.UI.Msgbox("There is not an group/user associated with this Product Line")
+
+				F.Intrinsic.Control.Else
+'If there is an associated group with the current router and product line then email everyone in the group					
+					F.Intrinsic.Control.DoUntil(V.ODBC.Conx!rstReadTable.EOF,=,True)
+						F.Intrinsic.Control.If(V.ODBC.conx!rstReadTable.FieldVal!CONTACT_TYPE,=,0)
+							V.Local.sGroup.Set(V.ODBC.conx!rstReadTable.FieldVal!USERS_GROUP)
+							F.Global.Security.GetUserEmail(V.caller.user,V.Caller.CompanyCode,V.Local.sSenderEmail)
+							F.Global.Security.GetGroupEmails(V.Local.sGroup,V.Caller.CompanyCode,V.Local.sGroupemails)
+							F.Intrinsic.String.Split(V.Local.sGroupemails,"*!*",V.Local.sGroupemails)
+							F.Intrinsic.String.Concat("Router ",V.Passed.000014," is ready to quote.",V.Local.sSubjectLine)
+							F.Intrinsic.Control.For(V.Local.iCount,0,V.Local.sGroupemails.UBound,1)
+								Function.Global.Messaging.CreateEMmessage(V.Local.sGroupemails(V.Local.iCount),"",V.Local.sSenderEmail,"",V.Local.sSubjectLine,V.Passed.000017,"",True)
+							F.Intrinsic.Control.Next(V.Local.iCount)
+'If there is an associated user with the current router and product line then email a specific user						
+						F.Intrinsic.Control.Else
+							V.Local.sGroup.Set(V.ODBC.conx!rstReadTable.FieldVal!USERS_GROUP)
+							Function.Global.Security.GetUserEmail(V.caller.user,V.Caller.CompanyCode,V.Local.sSenderEmail)
+							Function.Global.Security.GetUserEmail(V.Local.sGroup,V.Caller.CompanyCode,V.Local.sUserRet)
+							F.Intrinsic.String.Concat("Router ",V.Passed.000014," is ready to quote.",V.Local.sSubjectLine)
+							Function.Global.Messaging.CreateEMmessage(V.Local.sUserRet,"",V.Local.sSenderEmail,"",V.Local.sSubjectLine,V.Passed.000017,"",True)
+						F.Intrinsic.Control.EndIf
+						F.ODBC.Conx!rstReadTable.MoveNext
+					F.Intrinsic.Control.Loop
+				F.Intrinsic.Control.EndIf
+
+			F.Intrinsic.Control.EndIf
+'Adds the current router to ATG_RTR_QT_CHECKED and sets its status to checked.
+		Function.ODBC.Conx!rstCheckforChecked.AddNew
+		Function.ODBC.Conx!rstCheckforChecked.Set!ROUTER_NO(V.Passed.000014)
+		Function.ODBC.Conx!rstCheckforChecked.Set!CHECKED("1")
+		F.ODBC.Conx!rstCheckforChecked.Update
+	F.Intrinsic.Control.Else
+'If the router already exists in ATG_RTR_QT_CHECKED and currently on the screen the "Ready to Quote" check box is UNCHECKED then update that routers status in ATG_RTR_QT_CHECKED to unchecked
+		F.Intrinsic.Control.If(V.Passed.GAB-CHK-1,=,"N")
+			Function.ODBC.Conx!rstCheckforChecked.Set!CHECKED("0")
+		F.Intrinsic.Control.Else
+'If the router already exists in ATG_RTR_QT_CHECKED and currently on the screen the "Ready to Quote" check box is CHECKED then update that routers status in ATG_RTR_QT_CHECKED to checked
+			Function.ODBC.Conx!rstCheckforChecked.Set!CHECKED("1")
+		F.Intrinsic.Control.Endif
+		F.ODBC.Conx!rstCheckforChecked.Update
+	F.Intrinsic.Control.EndIf
+'Resetting the check box to unchecked
+		F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PL",41)
+		F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PT",192)
+		F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"HIDE",0)
+		F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"LOCK",0)
+		'V.Passed.GAB-CHK-1.Set("N")
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.If(V.Caller.Hook,=,11092)
+	F.Intrinsic.String.Concat("SELECT * FROM ATG_RTR_QT_CHECKED WHERE ROUTER_NO = '",V.Passed.000014,"'",V.Local.sQuery2)
+	F.ODBC.Connection!conx.OpenRecordsetRW("rstCheckforChecked",V.Local.sQuery2)
+'If the router is not in the custom table
+	F.Intrinsic.Control.If(V.ODBC.Conx!rstCheckforChecked.EOF,=,True)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.Control.If(V.Passed.GAB-CHK-1,=,"Y")
+			Function.ODBC.Conx!rstCheckforChecked.Set!CHECKED("1")
+		F.Intrinsic.Control.Else
+			Function.ODBC.Conx!rstCheckforChecked.Set!CHECKED("0")
+		F.Intrinsic.Control.Endif
+	F.ODBC.Conx!rstCheckforChecked.Update
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.If(V.Caller.Hook,=,11110)
+'When router changes on the screen
+'Clear the check box
+	V.Passed.GAB-CHK-1.Set("N")
+'Look for the current router in ATG_RTR_QT_CHECKED
+	F.Intrinsic.String.Concat("SELECT * FROM ATG_RTR_QT_CHECKED WHERE ROUTER_NO = '",V.Passed.000014,"'",V.Local.sQuery2)
+	F.ODBC.Connection!conx.OpenRecordsetRW("rstCheckforChecked",V.Local.sQuery2)
+'If the router does not exist do nothing
+	F.Intrinsic.Control.If(V.ODBC.Conx!rstCheckforChecked.EOF,=,True)
+		F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"LOCK",0)
+	F.Intrinsic.Control.Else
+'If the router does exist reset the check box formatting
+		F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PL",41)
+		F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PT",192)
+		F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"HIDE",0)
+		F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"LOCK",0)
+'If the router does exists AND its checked value is True then check the check box
+		F.Intrinsic.Control.If(V.ODBC.Conx!rstCheckforChecked.FieldVal!CHECKED,=,True)
+			V.Passed.GAB-CHK-1.Set("Y")
+		F.Intrinsic.Control.Else
+'If the router does exists AND its checked value is False then UCHECK the check box
+			V.Passed.GAB-CHK-1.Set("N")
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+Program.Sub.Comments.Start
+${$0$}$NewScript$}$TSP$}$9/11/2012
+Program.Sub.Comments.End
+
