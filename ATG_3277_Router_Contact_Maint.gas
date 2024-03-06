@@ -1,0 +1,350 @@
+Program.Sub.ScreenSU.Start
+gui.F_R_E_Maint..create
+gui.F_R_E_Maint..caption("ATG Router Quote Maintenance")
+gui.F_R_E_Maint..size(5760,3600)
+gui.F_R_E_Maint..position(0,0)
+gui.F_R_E_Maint..event(unload,f_r_e_maint_unload)
+gui.F_R_E_Maint..alwaysontop(False)
+gui.F_R_E_Maint..fontname("Arial")
+gui.F_R_E_Maint..fontsize(8)
+gui.F_R_E_Maint..forecolor(0)
+gui.F_R_E_Maint..fontstyle(,,,,)
+gui.F_R_E_Maint..BackColor(-2147483633)
+gui.F_R_E_Maint..controlbox(True)
+gui.F_R_E_Maint..maxbutton(False)
+gui.F_R_E_Maint..minbutton(True)
+gui.F_R_E_Maint..mousepointer(0)
+gui.F_R_E_Maint..moveable(True)
+gui.F_R_E_Maint..sizeable(True)
+gui.F_R_E_Maint..ShowInTaskBar(True)
+gui.F_R_E_Maint..titlebar(True)
+gui.F_R_E_Maint.btnAdd.create(button)
+gui.F_R_E_Maint.btnAdd.caption("Add Row")
+gui.F_R_E_Maint.btnAdd.visible(True)
+gui.F_R_E_Maint.btnAdd.size(855,375)
+gui.F_R_E_Maint.btnAdd.zorder(0)
+gui.F_R_E_Maint.btnAdd.position(1030,2590)
+gui.F_R_E_Maint.btnAdd.enabled(True)
+gui.F_R_E_Maint.btnAdd.fontname("Arial")
+gui.F_R_E_Maint.btnAdd.fontsize(8)
+gui.F_R_E_Maint.btnAdd.event(click,btnadd_click)
+gui.F_R_E_Maint.flxGridMain.create(gsflexgrid)
+gui.F_R_E_Maint.flxGridMain.FixedRows(0)
+gui.F_R_E_Maint.flxGridMain.FixedCols(0)
+gui.F_R_E_Maint.flxGridMain.visible(True)
+gui.F_R_E_Maint.flxGridMain.size(5400,2460)
+gui.F_R_E_Maint.flxGridMain.zorder(0)
+gui.F_R_E_Maint.flxGridMain.position(45,60)
+gui.F_R_E_Maint.flxGridMain.enabled(True)
+gui.F_R_E_Maint.flxGridMain.event(posttextmatrix,fgdrqm_posttextmatrix)
+gui.F_R_E_Maint.flxGridMain.event(comboexit,fgdrqm_comboexit)
+gui.F_R_E_Maint.flxGridMain.event(commandclick,fgdrqm_commandclick)
+gui.F_R_E_Maint.btnUpdate.create(button)
+gui.F_R_E_Maint.btnUpdate.caption("Update")
+gui.F_R_E_Maint.btnUpdate.visible(True)
+gui.F_R_E_Maint.btnUpdate.size(855,375)
+gui.F_R_E_Maint.btnUpdate.zorder(0)
+gui.F_R_E_Maint.btnUpdate.position(75,2590)
+gui.F_R_E_Maint.btnUpdate.enabled(True)
+gui.F_R_E_Maint.btnUpdate.fontname("Arial")
+gui.F_R_E_Maint.btnUpdate.fontsize(8)
+gui.F_R_E_Maint.btnUpdate.event(click,btnupdate_click)
+
+
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Variable.Global.iRowCount.Declare(Long,0)
+
+Variable.Global.iCount.Declare(Long,0)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+Function.ODBC.Connection!Conx.OpenConnection(Variable.ambient.PDSN,Variable.Ambient.PUSER,Variable.Ambient.PPass)
+Gui.F_R_E_Maint..Show
+V.Local.iC.Declare(Long)
+V.Local.iCols.Declare(Long)
+V.Local.sSQL.Declare(String)
+V.Local.iR.Declare(Long)
+V.Local.iRow.Declare(Long)
+V.Local.sTextRet.Declare(String)
+V.Local.iRowNum.Declare(Long)
+V.Local.sRowVals.Declare(String)
+
+F.Intrinsic.Control.CallSub(Styles)
+
+F.Intrinsic.String.Concat("SELECT  ID, PRODUCT_LINE, USERS_GROUP, Case Contact_Type When '0' then 'Group' When '1' then 'User' End as ContactType FROM ATG_3277_RTR_QT_CONT ORDER BY ID ASC","",V.Local.sSQL)
+F.ODBC.Connection!conx.OpenRecordsetRO("rstGetContacts",V.Local.sSQL)
+Gui.F_R_E_Maint.flxGridMain.LoadRecordset("conx!rstGetContacts",2,True)
+F.ODBC.Conx!rstGetContacts.Close
+Gui.F_R_E_Maint.flxGridMain.FixedRows(1)
+V.Local.iRow.Set(V.Screen.F_R_E_Maint!flxGridMain.Rows)
+F.Intrinsic.Math.Sub(V.Local.iRow,1,V.Local.iRow)
+Gui.F_R_E_Maint.flxGridMain.Rows(V.Local.iRow)
+V.Global.iRowCount.Set(V.Local.iRow)
+
+
+Program.Sub.Main.End
+
+program.sub.btnupdate_click.start
+V.Local.sQuery.Declare(String)
+V.Local.sContactType.Declare(String)
+V.Local.iC.Declare(Long)
+V.Local.sSQL.Declare(String)
+V.Local.iRow.Declare(Long)
+V.Local.iIDNum.Declare(Long)
+V.Local.sRowData.Declare(String)
+
+V.Local.iRow.Set(V.Screen.F_R_E_Maint!flxGridMain.Rows)
+
+F.Intrinsic.Control.If(V.Local.iRow,<>,V.Global.iRowCount)
+
+	F.Intrinsic.Math.Sub(V.Local.iRow,1,V.Local.iRow)
+	F.Intrinsic.Control.For(V.Global.iCount,1,V.Local.iRow,1)
+		Gui.F_R_E_Maint.flxGridMain.ReadRow(V.Global.iCount,V.Local.sRowData)
+		F.Intrinsic.String.Split(V.Local.sRowData,"*!*",V.Local.sRowData)
+		F.Intrinsic.String.Concat("SELECT * FROM ATG_3277_RTR_QT_CONT WHERE ID = '",V.Local.sRowData(0),"'",V.Local.sQuery)
+		F.ODBC.Connection!Conx.OpenRecordsetRW("rstQuoteMaint",V.Local.sQuery)
+		F.Intrinsic.Control.If(V.ODBC.Conx!rstQuoteMaint.EOF,=,True)
+			F.ODBC.Conx!rstQuoteMaint.AddNew
+			F.ODBC.Conx!rstQuoteMaint.Set!PRODUCT_LINE(V.Local.sRowData(1))
+			F.ODBC.Conx!rstQuoteMaint.Set!USERS_GROUP(V.Local.sRowData(2))
+			F.Intrinsic.Control.If(V.Local.sRowData(3),=,"Group")
+				V.Local.sRowData(3).Set("0")
+			F.Intrinsic.Control.Else
+				V.Local.sRowData(3).Set("1")
+			F.Intrinsic.Control.EndIf
+			F.ODBC.Conx!rstQuoteMaint.Set!CONTACT_TYPE(V.Local.sRowData(3))
+			F.Intrinsic.Control.CallSub(Validateusers)
+			F.ODBC.Conx!rstQuoteMaint.Update
+			F.ODBC.Conx!rstQuoteMaint.Close
+			F.Intrinsic.Math.Add(V.Global.iRowCount,1,V.Global.iRowCount)
+		F.Intrinsic.Control.Else
+			F.ODBC.Conx!rstQuoteMaint.Set!PRODUCT_LINE(V.Local.sRowData(1))
+			F.ODBC.Conx!rstQuoteMaint.Set!USERS_GROUP(V.Local.sRowData(2))
+			F.Intrinsic.Control.If(V.Local.sRowData(3),=,"Group")
+				V.Local.sRowData(3).Set("0")
+			F.Intrinsic.Control.Else
+				V.Local.sRowData(3).Set("1")
+			F.Intrinsic.Control.EndIf
+			F.ODBC.Conx!rstQuoteMaint.Set!CONTACT_TYPE(V.Local.sRowData(3))
+			F.Intrinsic.Control.CallSub(Validateusers)
+			F.ODBC.Conx!rstQuoteMaint.Update
+			F.ODBC.Conx!rstQuoteMaint.Close
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.Next(V.Global.iCount)
+	F.Intrinsic.Control.CallSub(Refreshgrid)
+
+F.Intrinsic.Control.Else
+	F.Intrinsic.Math.Sub(V.Local.iRow,1,V.Local.iRow)
+	F.Intrinsic.Control.For(V.Global.iCount,1,V.Local.iRow,1)
+		Gui.F_R_E_Maint.flxGridMain.GetTextMatrix(0,V.Global.iCount,V.Local.iIDNum)
+		F.Intrinsic.String.Concat("SELECT * FROM ATG_3277_RTR_QT_CONT WHERE ID='",V.Local.iIDNum,"'",V.Local.sQuery)
+		F.ODBC.Connection!Conx.OpenRecordsetRW("rstQuoteMaint",V.Local.sQuery)
+		Gui.F_R_E_Maint.flxGridMain.ReadRow(V.Global.iCount,V.Local.sRowData)
+		F.Intrinsic.String.Split(V.Local.sRowData,"*!*",V.Local.sRowData)
+		F.ODBC.Conx!rstQuoteMaint.Set!PRODUCT_LINE(V.Local.sRowData(1))
+		F.ODBC.Conx!rstQuoteMaint.Set!USERS_GROUP(V.Local.sRowData(2))
+		F.Intrinsic.Control.If(V.Local.sRowData(3),=,"Group")
+			V.Local.sRowData(3).Set("0")
+		F.Intrinsic.Control.Else
+			V.Local.sRowData(3).Set("1")
+		F.Intrinsic.Control.EndIf
+		F.ODBC.Conx!rstQuoteMaint.Set!CONTACT_TYPE(V.Local.sRowData(3))
+		F.Intrinsic.Control.CallSub(Validateusers)
+		F.ODBC.Conx!rstQuoteMaint.Update
+		F.ODBC.Conx!rstQuoteMaint.Close
+	F.Intrinsic.Control.Next(V.Global.iCount)
+	F.Intrinsic.Control.CallSub(Refreshgrid)
+
+F.Intrinsic.Control.EndIf
+
+
+
+program.sub.btnupdate_click.end
+
+program.sub.f_r_e_maint_unload.start
+F.Intrinsic.Control.End
+
+
+program.sub.f_r_e_maint_unload.end
+
+program.sub.btnadd_click.start
+V.Local.sQuery.Declare(String)
+V.Local.sContactType.Declare(String)
+V.Local.iC.Declare(Long)
+V.Local.sSQL.Declare(String)
+V.Local.iRow.Declare(Long)
+
+V.Local.iRow.Set(V.Screen.F_R_E_Maint!flxGridMain.Rows)
+F.Intrinsic.Math.Add(V.Local.iRow,1,V.Local.iRow)
+Gui.F_R_E_Maint.flxGridMain.Rows(V.Local.iRow)
+
+F.Intrinsic.Math.SUB(V.Local.iRow,1,V.Local.iRow)
+Gui.F_R_E_Maint.flxGridMain.ApplyStyle(V.Local.iRow,4)
+
+program.sub.btnadd_click.end
+
+Program.Sub.RefreshGrid.Start
+V.Local.sQuery.Declare(String)
+V.Local.sContactType.Declare(String)
+V.Local.sSQL.Declare(String)
+V.Local.iC.Declare(Long)
+V.Local.iCols.Declare(Long)
+V.Local.iR.Declare(Long)
+V.Local.iRow.Declare(Long)
+V.Local.sTextRet.Declare(String)
+V.Local.iRowNum.Declare(Long)
+V.Local.sRowVals.Declare(String)
+V.Local.sRet.Declare
+
+F.Intrinsic.Control.CallSub(Styles)
+
+F.Intrinsic.String.Concat("SELECT  ID, PRODUCT_LINE, USERS_GROUP, Case Contact_Type When '0' then 'Group' When '1' then 'User' End as ContactType FROM ATG_3277_RTR_QT_CONT ORDER BY ID ASC","",V.Local.sSQL)
+F.ODBC.Connection!conx.OpenRecordsetRO("rstGetContacts",V.Local.sSQL)
+Gui.F_R_E_Maint.flxGridMain.LoadRecordset("conx!rstGetContacts",2,True)
+F.ODBC.Conx!rstGetContacts.close
+
+Gui.F_R_E_Maint.flxGridMain.FixedRows(1)
+
+V.Local.iRow.Set(V.Screen.F_R_E_Maint!flxGridMain.Rows)
+F.Intrinsic.Math.Sub(V.Local.iRow,1,V.Local.iRow)
+
+Gui.F_R_E_Maint.flxGridMain.GetTextMatrix(0,V.Local.iRow,V.Local.sRet)
+
+F.Intrinsic.Control.If(V.Local.sRet.Trim,=,"")
+	Gui.F_R_E_Maint.flxGridMain.Rows(V.Local.iRow)
+F.Intrinsic.Control.EndIf
+
+
+
+Program.Sub.RefreshGrid.End
+
+program.sub.fgdrqm_commandclick.start
+V.Local.sDelete.Declare(String)
+V.Local.sQuery.Declare(String)
+V.Local.iRow.Declare(Long)
+V.Local.iC.Declare(Long)
+V.Local.sRowData.Declare(String)
+V.Local.iIDNum.Declare
+
+Gui.F_R_E_Maint.flxGridMain.GetTextMatrix(0,V.Args.Key,V.Local.iIDNum)
+
+F.Intrinsic.UI.Msgbox("Are you sure you want to delete this record?","Delete Record",4,V.Local.sDelete)
+Gui.F_R_E_Maint.flxGridMain.ReadRow(V.Local.iC,V.Local.sRowData)
+F.Intrinsic.String.Split(V.Local.sRowData,"*!*",V.Local.sRowData)
+
+F.Intrinsic.Control.If(V.Local.sDelete,=,6)
+	F.Intrinsic.String.Concat("DELETE  FROM ATG_3277_RTR_QT_CONT WHERE ID = '",V.Local.iIDNum,"'",V.Local.sQuery)
+	F.ODBC.Connection!Conx.execute(V.Local.sQuery)
+	F.Intrinsic.Control.CallSub(Refreshgrid)
+'F.Intrinsic.Control.ElseIf()
+F.Intrinsic.Control.EndIf
+
+
+program.sub.fgdrqm_commandclick.end
+
+program.sub.fgdrqm_posttextmatrix.start
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(0,0,"ID")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(0,0)
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(1,0,"Product Line")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(1,1200)
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(2,0,"GSS Contact Title")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(2,1500)
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(3,0,"Contact Type")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(3,1300)
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(4,0,"")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(4,1300)
+
+program.sub.fgdrqm_posttextmatrix.end
+
+Program.Sub.Styles.Start
+V.Local.iC.Declare(Long)
+V.Local.sQuery.Declare(String)
+V.Local.sPL.Declare(String)
+
+Gui.F_R_E_Maint.flxGridMain.SetProperty("Enter",1)
+
+Gui.F_R_E_Maint.flxGridMain.Rows(1)
+Gui.F_R_E_Maint.flxGridMain.Cols(5)
+
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(0,0,"ID")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(0,0)
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(1,0,"Product Line")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(1,1200)
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(2,0,"Group/User Name")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(2,1500)
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(3,0,"Contact Type")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(3,1300)
+Gui.F_R_E_Maint.flxGridMain.TextMatrix(4,0,"")
+Gui.F_R_E_Maint.flxGridMain.ColWidth(4,1300)
+
+F.Intrinsic.Control.For(V.Local.iC,0,4,1)
+	Gui.F_R_E_Maint.flxGridMain.BuildStyle(1,V.Local.iC,"Type","Locked","True")
+	Gui.F_R_E_Maint.flxGridMain.BuildStyle(1,V.Local.iC,"Format","Alignment","2")
+F.Intrinsic.Control.Next(V.Local.iC)
+Gui.F_R_E_Maint.flxGridMain.ApplyStyle(0,1)
+
+F.Intrinsic.String.Concat("Select Product_Line from Product_Line where Key_Data='ORDPRDLN'","",V.Local.sQuery)
+F.ODBC.Connection!conx.OpenRecordsetRO("rstGetProductLines",V.Local.sQuery)
+F.Intrinsic.Control.DoUntil(V.ODBC.Conx!rstGetProductLines.EOF,=,True)
+	F.Intrinsic.Control.If(V.Local.sPL,=,"")
+		V.Local.sPL.Set(V.ODBC.Conx!rstGetProductLines.FieldVal!PRODUCT_LINE)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Concat(V.Local.sPL,"*!*",V.ODBC.Conx!rstGetProductLines.FieldVal!PRODUCT_LINE,V.Local.sPL)
+	F.Intrinsic.Control.EndIf
+	F.ODBC.Conx!rstGetProductLines.MoveNext
+F.Intrinsic.Control.Loop
+F.ODBC.Conx!rstGetProductLines.Close
+
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,1,"Type","Dropdownlist",V.Local.sPL)
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,1,"Format","Alignment","2")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,0,"Type","Locked","True")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,0,"Format","Alignment","2")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,2,"Format","Alignment","2")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,2,"Format","Maxlength",8)
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,3,"Type","dropdownlist","Group*!*User")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,3,"Format","Alignment","2")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,4,"Type","Command","Delete")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(2,4,"Format","Alignment","4")
+
+'Style for New Row
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,1,"Type","Dropdownlist",V.Local.sPL)
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,1,"Format","Alignment","2")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,0,"Type","Locked","True")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,0,"Format","Alignment","2")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,2,"Format","Alignment","2")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,2,"Format","Maxlength",8)
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,3,"Type","dropdownlist","Group*!*User")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,3,"Format","Alignment","2")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,4,"Type","Command","Delete")
+Gui.F_R_E_Maint.flxGridMain.BuildStyle(4,4,"Format","Alignment","4")
+
+Program.Sub.Styles.End
+
+Program.Sub.ValidateUsers.Start
+V.Local.sCellData.Declare(String)
+V.Local.sCellDataType.Declare(String)
+V.Local.sValidUser.Declare(String)
+V.Local.sInvalidUser.Declare(String)
+
+Gui.F_R_E_Maint.flxGridMain.GetTextMatrix(2,V.Global.iCount,V.Local.sCellData)
+Gui.F_R_E_Maint.flxGridMain.GetTextMatrix(3,V.Global.iCount,V.Local.sCellDataType)
+F.Intrinsic.Control.IF(V.Local.sCellDataType,=,"User")
+	F.Global.Security.GetUserEmail(V.Local.sCellData,V.Caller.CompanyCode,V.Local.sValidUser)
+	F.Intrinsic.Control.If(V.Local.sValidUser,=,"")
+		F.Intrinsic.String.Concat(V.Local.sCellData," is not a valid user, please enter a valid user name.",V.Local.sInvalidUser)
+		F.Intrinsic.UI.Msgbox(V.Local.sInvalidUser)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Else
+	F.Global.Security.GetGroupEmails(V.Local.sCellData,V.Caller.CompanyCode,V.Local.sValidUser)
+	F.Intrinsic.Control.If(V.Local.sValidUser,=,"")
+		F.Intrinsic.String.Concat(V.Local.sCellData," is not a valid group, please enter a valid group name.",V.Local.sInvalidUser)
+		F.Intrinsic.UI.Msgbox(V.Local.sInvalidUser)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+Program.Sub.ValidateUsers.End
+
+
