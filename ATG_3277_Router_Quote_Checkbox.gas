@@ -1,0 +1,89 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+Function.ODBC.Connection!Conx.OpenConnection(Variable.ambient.PDSN,Variable.Ambient.PUSER,Variable.Ambient.PPass)
+V.Local.sQuery.Declare(String)
+V.Local.sProdLine.Declare(String)
+V.Local.sUserRet.Declare(String)
+V.Local.sGroupRet.Declare(String)
+V.Local.sGroupemails.Declare(String)
+V.Local.sGroup.Declare(String)
+V.Local.iCount.Declare(Long)
+V.Local.sSubjectLine.Declare(String)
+V.Local.sRtrDesc.Declare(String)
+V.Local.sUserName.Declare(String)
+V.Local.sSenderEmail.Declare(String)
+
+
+F.Intrinsic.Control.If(V.Caller.Hook,=,11010)
+	F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PL",325)
+	F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PT",185)
+	F.Intrinsic.Variable.SetProperty("GAB-LBL-1","PW",100)
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-LBL-1,"HIDE",0)
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-LBL-1,"LOCK",0)
+	V.passed.GAB-LBL-1.set("Router Complete")
+
+	F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PL",305)
+	F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PT",185)
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"HIDE",0)
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"LOCK",0)
+	V.Passed.GAB-CHK-1.Set("N")
+
+F.Intrinsic.Control.ElseIf(V.Caller.Hook,=,11090)
+
+	F.Intrinsic.Control.If(V.Passed.GAB-CHK-1,=,"Y")
+	V.Local.sProdLine.Set(V.Passed.000037)
+
+	F.Intrinsic.String.Concat("Select PRODUCT_LINE, USERS_GROUP, CONTACT_TYPE FROM ATG_3277_RTR_QT_CONT WHERE PRODUCT_LINE = '",V.local.sProdLine,"'"," ORDER BY CONTACT_TYPE",V.local.sQuery)
+	F.ODBC.Connection!conx.OpenRecordsetRO("rstReadTable",V.Local.sQuery)
+
+		F.Intrinsic.Control.If(V.ODBC.Conx!rstReadTable.EOF,=,True)
+			F.Intrinsic.UI.Msgbox("There is not an group/user associated with this Product Line")
+
+		F.Intrinsic.Control.Else
+			
+			F.Intrinsic.Control.DoUntil(V.ODBC.Conx!rstReadTable.EOF,=,True)
+				F.Intrinsic.Control.If(V.ODBC.conx!rstReadTable.FieldVal!CONTACT_TYPE,=,0)
+					V.Local.sGroup.Set(V.ODBC.conx!rstReadTable.FieldVal!USERS_GROUP)
+					F.Global.Security.GetUserEmail(V.caller.user,V.Caller.CompanyCode,V.Local.sSenderEmail)
+					F.Global.Security.GetGroupEmails(V.Local.sGroup,V.Caller.CompanyCode,V.Local.sGroupemails)
+					F.Intrinsic.String.Split(V.Local.sGroupemails,"*!*",V.Local.sGroupemails)
+					F.Intrinsic.String.Concat("Router ",V.Passed.000014," is ready to quote.",V.Local.sSubjectLine)
+					F.Intrinsic.Control.For(V.Local.iCount,0,V.Local.sGroupemails.UBound,1)
+						Function.Global.Messaging.CreateEMmessage(V.Local.sGroupemails(V.Local.iCount),"",V.Local.sSenderEmail,"",V.Local.sSubjectLine,V.Passed.000017,"",True)
+					F.Intrinsic.Control.Next(V.Local.iCount)
+			
+				F.Intrinsic.Control.Else
+					V.Local.sGroup.Set(V.ODBC.conx!rstReadTable.FieldVal!USERS_GROUP)
+					Function.Global.Security.GetUserEmail(V.caller.user,V.Caller.CompanyCode,V.Local.sSenderEmail)
+					Function.Global.Security.GetUserEmail(V.Local.sGroup,V.Caller.CompanyCode,V.Local.sUserRet)
+					F.Intrinsic.String.Concat("Router ",V.Passed.000014," is ready to quote.",V.Local.sSubjectLine)
+					Function.Global.Messaging.CreateEMmessage(V.Local.sUserRet,"",V.Local.sSenderEmail,"",V.Local.sSubjectLine,V.Passed.000017,"",True)
+				F.Intrinsic.Control.EndIf
+				F.ODBC.Conx!rstReadTable.MoveNext
+			F.Intrinsic.Control.Loop
+		F.Intrinsic.Control.EndIf
+
+	F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PL",305)
+F.Intrinsic.Variable.SetProperty("GAB-CHK-1","PT",185)
+F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"HIDE",0)
+F.Intrinsic.UI.ChangeCallerProperty(V.Passed.GAB-CHK-1,"LOCK",0)
+V.Passed.GAB-CHK-1.Set("N")
+
+F.Intrinsic.Control.EndIf
+
+
+
+Program.Sub.Main.End
+
+Program.Sub.Comments.Start
+${$0$}$NewScript$}$TSP$}$9/11/2012
+Program.Sub.Comments.End
+
